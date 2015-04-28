@@ -1,3 +1,14 @@
 <resources>
+
     <string name="app_name">ADBWifiWidget</string>
+
+    <string name="add_widget">Add widget</string>
+    <string name="appwidget_text">EXAMPLE</string>
+
+    <string name="image_description">Button</string>
+
+    <string name="android_hint">Touch me!</string>
+
+    <string name="not_rooted">Root is not found, the app can not work :(</string>
+
 </resources>
