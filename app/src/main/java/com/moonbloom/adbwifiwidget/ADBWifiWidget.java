@@ -114,6 +114,7 @@ public class ADBWifiWidget extends AppWidgetProvider {
             createBoastAndLog(context, text);
 
             remoteViews.setTextViewText(R.id.widget_text, text);
+            remoteViews.setImageViewResource(R.id.widget_image, R.drawable.android_adb_off);
             return;
         }
 
@@ -185,9 +186,11 @@ public class ADBWifiWidget extends AppWidgetProvider {
             //String hint = ip != null ? String.format("%s:%s", ip, getAdbPort()) : "OK!";
             String hint;
             if(ip != null && !ip.equals(invalidIp)) {
-                hint = ip;
+                hint = "LOL"; //ip;
+                remoteViews.setImageViewResource(R.id.widget_image, R.drawable.android_adb_on);
             } else {
                 hint = context.getString(R.string.turn_on_wifi);
+                remoteViews.setImageViewResource(R.id.widget_image, R.drawable.android_adb_wifi);
             }
 
             createBoastAndLog(context, "IP: " + ip + " - Hint: " + hint);
@@ -195,6 +198,7 @@ public class ADBWifiWidget extends AppWidgetProvider {
             remoteViews.setTextViewText(R.id.widget_text, hint);
         } else {
             remoteViews.setTextViewText(R.id.widget_text, context.getString(R.string.disabled));
+            remoteViews.setImageViewResource(R.id.widget_image, R.drawable.android_adb_off);
         }
     }
 
@@ -247,10 +251,12 @@ public class ADBWifiWidget extends AppWidgetProvider {
     }
 
     private void closeAllShells() {
-        try {
-            RootTools.closeAllShells();
-        } catch (IOException e) {
-            e.printStackTrace();
+        if(RootTools.isAccessGiven()) {
+            try {
+                RootTools.closeAllShells();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 

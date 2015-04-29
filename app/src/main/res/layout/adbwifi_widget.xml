@@ -9,7 +9,7 @@
         android:id="@+id/widget_image"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:src="@drawable/android_adb"
+        android:src="@drawable/android_adb_off"
         android:layout_centerHorizontal="true"
         android:layout_centerVertical="true"
         android:contentDescription="@string/image_description"/>
@@ -22,7 +22,7 @@
         android:layout_centerVertical="true"
         android:textColor="@color/text_color"
         android:text="@string/disabled"
-        android:textSize="20sp"
+        android:textSize="17sp"
         android:textStyle="bold|italic"/>
 
 </RelativeLayout>
