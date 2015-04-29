@@ -8,8 +8,8 @@ android {
         applicationId "com.moonbloom.adbwifiwidget"
         minSdkVersion 14
         targetSdkVersion 22
-        versionCode 1
-        versionName "1.0"
+        versionCode 11
+        versionName "0.2"
     }
 
     buildTypes {
@@ -24,4 +24,8 @@ dependencies {
     //compile fileTree(dir: 'libs', include: ['*.jar'])
 
     compile files('libs/RootTools.jar')
+
+    compile 'com.android.support:support-v4:22.0.0'
+
+    compile 'com.moonbloom:boast:0.2.0'
 }

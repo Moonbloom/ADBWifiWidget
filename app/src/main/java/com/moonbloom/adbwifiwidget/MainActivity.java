@@ -3,13 +3,11 @@ package com.moonbloom.adbwifiwidget;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
-import android.graphics.PorterDuff;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.stericson.RootTools.RootTools;
@@ -24,19 +22,21 @@ import java.util.concurrent.TimeoutException;
 
 //https://bitbucket.org/RankoR/adb-over-network/src/
 
+@SuppressWarnings("FieldCanBeLocal")
 public class MainActivity extends Activity implements View.OnClickListener {
 
-    private static final String TAG = "ADBON/MainActivity";
+    //region Variables
+    //Debug TAG
+    private transient final String TAG = ((Object)this).getClass().getSimpleName();
 
-    private static final String GET_PROP_COMMAND = "getprop service.adb.tcp.port";
-    private static final String SET_PROP_COMMAND_ON = "setprop service.adb.tcp.port 5555";
-    private static final String SET_PROP_COMMAND_OFF = "setprop service.adb.tcp.port -1";
-    private static final String STOP_ADBD_COMMAND = "stop adbd";
-    private static final String START_ADBD_COMMAND = "start adbd";
+    private final String GET_PROP_COMMAND = "getprop service.adb.tcp.port";
+    private final String SET_PROP_COMMAND_ON = "setprop service.adb.tcp.port 5555";
+    private final String SET_PROP_COMMAND_OFF = "setprop service.adb.tcp.port -1";
+    private final String STOP_ADBD_COMMAND = "stop adbd";
+    private final String START_ADBD_COMMAND = "start adbd";
 
     private boolean mIsActive = false;
-
-    private ImageView mAndroidIv;
+    //endregion
 
     /**
      * Called when the activity is first created.
@@ -45,8 +45,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
-
-        mAndroidIv = (ImageView) findViewById(R.id.android_iv);
     }
 
     @Override
@@ -110,16 +108,15 @@ public class MainActivity extends Activity implements View.OnClickListener {
      * Update the state
      */
     private void updateState() {
-        final TextView hintTv = (TextView) findViewById(R.id.hint_tv);
+        TextView hintTv = (TextView) findViewById(R.id.hint_tv);
 
         if (mIsActive) {
-            final String ip = getIpAddress();
-            final String hint = ip != null ? String.format("%s:%s", ip, getAdbPort()) : "OK!";
+            String ip = getIpAddress();
+            //String hint = ip != null ? String.format("%s:%s", ip, getAdbPort()) : "OK!";
+            String hint = ip != null ? ip : "IP is null!";
             hintTv.setText(hint);
-            mAndroidIv.setColorFilter(getResources().getColor(R.color.green), PorterDuff.Mode.MULTIPLY);
         } else {
             hintTv.setText(R.string.android_hint);
-            mAndroidIv.setColorFilter(getResources().getColor(R.color.red), PorterDuff.Mode.MULTIPLY);
         }
     }
 
@@ -127,7 +124,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
      * Refresh the ADB state
      */
     private void refreshAdbState() {
-        final String port = getAdbPort();
+        String port = getAdbPort();
         mIsActive = (port != null && !port.equals("-1"));
     }
 
@@ -136,8 +133,8 @@ public class MainActivity extends Activity implements View.OnClickListener {
      *
      * @return Port or null
      */
-    private static String getAdbPort() {
-        final String output = execCommand(GET_PROP_COMMAND);
+    private String getAdbPort() {
+        String output = execCommand(GET_PROP_COMMAND);
         if (output.isEmpty()) {
             return null;
         } else {
@@ -151,13 +148,13 @@ public class MainActivity extends Activity implements View.OnClickListener {
      * @param command Command to execute
      * @return Command output
      */
-    private static String execCommand(String command) {
+    private String execCommand(String command) {
         try {
-            final Process process = Runtime.getRuntime().exec(command);
+            Process process = Runtime.getRuntime().exec(command);
 
-            final InputStream stdout = process.getInputStream();
-            final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(stdout));
-            final StringBuilder stringBuilder = new StringBuilder();
+            InputStream stdout = process.getInputStream();
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(stdout));
+            StringBuilder stringBuilder = new StringBuilder();
             String line;
 
             while ((line = bufferedReader.readLine()) != null) {
@@ -180,10 +177,10 @@ public class MainActivity extends Activity implements View.OnClickListener {
      *
      * @return IP Address or null
      */
-    public String getIpAddress() {
+    private String getIpAddress() {
         WifiManager wifiManager = (WifiManager) getSystemService(WIFI_SERVICE);
-        final WifiInfo wifiInfo = wifiManager.getConnectionInfo();
-        final int ipAddress = wifiInfo.getIpAddress();
+        WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+        int ipAddress = wifiInfo.getIpAddress();
 
         return String.format("%d.%d.%d.%d", (ipAddress & 0xff), (ipAddress >> 8 & 0xff), (ipAddress >> 16 & 0xff), (ipAddress >> 24 & 0xff));
     }

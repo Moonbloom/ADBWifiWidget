@@ -3,10 +3,11 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="120dp"
     android:minHeight="40dp"
-    android:updatePeriodMillis="86400000"
-    android:previewImage="@drawable/example_appwidget_preview"
+    android:updatePeriodMillis="600000"
+    android:previewImage="@drawable/android_adb"
     android:initialLayout="@layout/adbwifi_widget"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
     android:initialKeyguardLayout="@layout/adbwifi_widget">
+
 </appwidget-provider>
