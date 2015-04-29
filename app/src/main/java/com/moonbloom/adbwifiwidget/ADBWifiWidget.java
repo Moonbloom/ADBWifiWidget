@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.support.annotation.NonNull;
 import android.util.Log;
 import android.widget.RemoteViews;
 
@@ -24,6 +25,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.concurrent.TimeoutException;
+
+//https://bitbucket.org/RankoR/adb-over-network/src/
 
 @SuppressWarnings("FieldCanBeLocal")
 public class ADBWifiWidget extends AppWidgetProvider {
@@ -60,6 +63,8 @@ public class ADBWifiWidget extends AppWidgetProvider {
 
     @Override
     public void onEnabled(Context context) {
+        super.onEnabled(context);
+
         wifiReceiver = new WifiReceiver();
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
@@ -85,6 +90,8 @@ public class ADBWifiWidget extends AppWidgetProvider {
 
     @Override
     public void onDisabled(Context context) {
+        super.onDisabled(context);
+
         if(wifiReceiver != null) {
             context.getApplicationContext().unregisterReceiver(wifiReceiver);
         }
@@ -92,6 +99,8 @@ public class ADBWifiWidget extends AppWidgetProvider {
 
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
+        super.onUpdate(context, appWidgetManager, appWidgetIds);
+
         createBoastAndLog(context, "onUpdate");
 
         //Construct the RemoteViews & ComponentName objects
@@ -112,15 +121,16 @@ public class ADBWifiWidget extends AppWidgetProvider {
 
         updateState(context, remoteViews);
 
-        //Instruct the widget manager to update the widget
         appWidgetManager.updateAppWidget(componentName, remoteViews);
 
         closeAllShells();
     }
 
     @Override
-    public void onReceive(Context context, Intent intent) {
+    public void onReceive(@NonNull Context context, @NonNull Intent intent) {
         super.onReceive(context, intent);
+
+        createBoastAndLog(context, "onReceive");
 
         AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
 
@@ -142,13 +152,6 @@ public class ADBWifiWidget extends AppWidgetProvider {
         Intent intent = new Intent(context, getClass());
         intent.setAction(action);
         return PendingIntent.getBroadcast(context, 0, intent, 0);
-    }
-
-    private void createBoastAndLog(Context context, String text) {
-        if(debug) {
-            Log.d(TAG, text);
-            Boast.makeText(context, text);
-        }
     }
 
     private void switchState(Context context, RemoteViews remoteViews) {
@@ -197,11 +200,7 @@ public class ADBWifiWidget extends AppWidgetProvider {
 
     private void refreshAdbState(Context context) {
         String port = getAdbPort();
-        if(port == null || port.equals("-1")) {
-            isActive = false;
-        } else {
-            isActive = true;
-        }
+        isActive = !(port == null || port.equals("-1"));
 
         createBoastAndLog(context, "Port: " + port + " - Refresh-isActive: " + isActive);
     }
@@ -252,6 +251,13 @@ public class ADBWifiWidget extends AppWidgetProvider {
             RootTools.closeAllShells();
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void createBoastAndLog(Context context, String text) {
+        if(debug) {
+            Log.d(TAG, text);
+            Boast.makeText(context, text);
         }
     }
 }
