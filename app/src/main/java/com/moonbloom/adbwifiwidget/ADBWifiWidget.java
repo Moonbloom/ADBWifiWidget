@@ -6,7 +6,6 @@ import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.support.annotation.NonNull;
@@ -35,8 +34,8 @@ public class ADBWifiWidget extends AppWidgetProvider {
     //Debug TAG
     private transient final String TAG = ((Object)this).getClass().getSimpleName();
 
-    //public static final String localBroadcastUpdateWifiMsg = "local_broadcast_update_wifi_msg";
-    //public static final String wifiEnabledBroadcastExtra = "wifi_enabled_broadcast_extra";
+    public static final String localBroadcastUpdateWifiMsg = "local_broadcast_update_wifi_msg";
+    public static final String wifiEnabledBroadcastExtra = "wifi_enabled_broadcast_extra";
 
     private static final String USER_CLICKED = "userClickedSwitchState";
 
@@ -50,7 +49,7 @@ public class ADBWifiWidget extends AppWidgetProvider {
 
     public static boolean debug = false;
 
-    private WifiReceiver wifiReceiver;
+    //private WifiReceiver wifiReceiver;
 
     private boolean isActive = false;
 
@@ -65,43 +64,46 @@ public class ADBWifiWidget extends AppWidgetProvider {
     public void onEnabled(Context context) {
         super.onEnabled(context);
 
-        wifiReceiver = new WifiReceiver();
-        IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
-        context.getApplicationContext().registerReceiver(wifiReceiver, intentFilter);
+        //Boast.makeText(context, "onEnabled - WiFi Receiver is created");
+
+        //wifiReceiver = new WifiReceiver();
+        //IntentFilter intentFilter = new IntentFilter(WifiManager.WIFI_STATE_CHANGED_ACTION);
+        //(WifiManager.SUPPLICANT_STATE_CHANGED_ACTION); //(WifiManager.NETWORK_STATE_CHANGED_ACTION); //WifiManager.WIFI_STATE_CHANGED_ACTION
+        //context.getApplicationContext().registerReceiver(wifiReceiver, intentFilter);
 
         /*
         BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 //Not using it atm, but might later
-                boolean wifiEnabled = intent.getBooleanExtra(wifiEnabledBroadcastExtra, false);
+                //boolean wifiEnabled = intent.getBooleanExtra(wifiEnabledBroadcastExtra, false);
 
-                createBoastAndLog(context, "WiFi state: " + wifiEnabled);
+                //createBoastAndLog(context, "WiFi state: " + wifiEnabled);
 
                 RemoteViews remoteViews = new RemoteViews(context.getPackageName(), R.layout.adbwifi_widget);
                 updateState(context, remoteViews);
             }
         };
-
-        LocalBroadcastManager.getInstance(context.getApplicationContext()).registerReceiver(mMessageReceiver, new IntentFilter(localBroadcastUpdateWifiMsg));
         */
+
+        //LocalBroadcastManager.getInstance(context.getApplicationContext()).registerReceiver(mMessageReceiver, new IntentFilter(localBroadcastUpdateWifiMsg));
     }
 
     @Override
     public void onDisabled(Context context) {
         super.onDisabled(context);
 
+        /*Boast.makeText(context, "onDisabled - WiFi Receiver is destroyed");
         if(wifiReceiver != null) {
             context.getApplicationContext().unregisterReceiver(wifiReceiver);
-        }
+        }*/
     }
 
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         super.onUpdate(context, appWidgetManager, appWidgetIds);
 
-        createBoastAndLog(context, "onUpdate");
+        //createBoastAndLog(context, "onUpdate");
 
         //Construct the RemoteViews & ComponentName objects
         RemoteViews remoteViews = new RemoteViews(context.getPackageName(), R.layout.adbwifi_widget);
@@ -131,7 +133,7 @@ public class ADBWifiWidget extends AppWidgetProvider {
     public void onReceive(@NonNull Context context, @NonNull Intent intent) {
         super.onReceive(context, intent);
 
-        createBoastAndLog(context, "onReceive");
+        //createBoastAndLog(context, "onReceive");
 
         AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
 
@@ -179,6 +181,7 @@ public class ADBWifiWidget extends AppWidgetProvider {
     }
 
     private void updateState(Context context, RemoteViews remoteViews) {
+        createBoastAndLog(context, "updateState");
         refreshAdbState(context);
 
         if (isActive) {

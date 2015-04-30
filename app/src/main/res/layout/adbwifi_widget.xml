@@ -23,7 +23,7 @@
         android:paddingTop="15dp"
         android:textColor="@color/text_color"
         android:text="@string/disabled"
-        android:textSize="17sp"
+        android:textSize="15sp"
         android:textStyle="bold|italic"/>
 
 </RelativeLayout>
