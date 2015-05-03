@@ -8,8 +8,8 @@ android {
         applicationId "com.moonbloom.adbwifiwidget"
         minSdkVersion 14
         targetSdkVersion 22
-        versionCode 23
-        versionName "0.4"
+        versionCode 44
+        versionName "0.6"
     }
 
     buildTypes {

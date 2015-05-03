@@ -5,7 +5,8 @@
     <string name="image_description">App icon</string>
 
     <string name="disabled">Disabled</string>
-    <string name="turn_on_wifi">Turn on WiFi</string>
+
+    <string name="turn_on_wifi">Turn WiFi on</string>
 
     <string name="not_rooted">NO ROOT !</string>
 

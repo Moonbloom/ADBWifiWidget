@@ -6,8 +6,14 @@ import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.support.v4.content.LocalBroadcastManager;
+import android.util.Log;
 
 public class WifiReceiver extends BroadcastReceiver {
+
+    //region Variables
+    //Debug TAG
+    private transient final String TAG = ((Object)this).getClass().getSimpleName();
+    //endregion
 
     @SuppressWarnings("deprecation")
     @Override
@@ -25,7 +31,8 @@ public class WifiReceiver extends BroadcastReceiver {
     }
 
     private void createLocalBroadcast(Context context, boolean isConnected) {
-        //Boast.makeText(context, "connected: " + isConnected);
+        //Boast.makeText(context, "Connected: " + isConnected);
+        Log.d(TAG, "Connected: " + isConnected);
         //Broadcast the update intent with the connection status as an extra
         Intent broadcastIntent = new Intent(ADBWifiWidget.localBroadcastUpdateWifiMsg);
         broadcastIntent.putExtra(ADBWifiWidget.wifiEnabledBroadcastExtra, isConnected);
