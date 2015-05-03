@@ -26,11 +26,11 @@
                 android:resource="@xml/adbwifi_widget_info" />
         </receiver>
 
-        <receiver
-            android:name=".WifiReceiver"
-            android:enabled="false"
-            android:exported="false" >
-        </receiver>
+        <!--        <receiver
+                    android:name=".WifiReceiver"
+                    android:enabled="false"
+                    android:exported="false" >
+                </receiver>-->
 
         <!--
         <activity

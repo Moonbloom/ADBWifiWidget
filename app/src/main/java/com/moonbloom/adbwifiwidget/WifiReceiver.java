@@ -25,6 +25,7 @@ public class WifiReceiver extends BroadcastReceiver {
     }
 
     private void createLocalBroadcast(Context context, boolean isConnected) {
+        //Boast.makeText(context, "connected: " + isConnected);
         //Broadcast the update intent with the connection status as an extra
         Intent broadcastIntent = new Intent(ADBWifiWidget.localBroadcastUpdateWifiMsg);
         broadcastIntent.putExtra(ADBWifiWidget.wifiEnabledBroadcastExtra, isConnected);

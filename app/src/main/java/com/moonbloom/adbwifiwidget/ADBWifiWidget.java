@@ -3,16 +3,12 @@ package com.moonbloom.adbwifiwidget;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
-import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
-import android.net.ConnectivityManager;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.support.annotation.NonNull;
-import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.RemoteViews;
 
@@ -48,8 +44,8 @@ public class ADBWifiWidget extends AppWidgetProvider {
     private final String START_ADBD_COMMAND = "start adbd";
     private final String STOP_ADBD_COMMAND = "stop adbd";
 
-    private static WifiReceiver wifiReceiver;
-    private static BroadcastReceiver localBroadcastReceiver;
+    //private static WifiReceiver wifiReceiver = null;
+    //private static BroadcastReceiver localBroadcastReceiver = null;
 
     private boolean isActive = false;
     //endregion
@@ -68,13 +64,20 @@ public class ADBWifiWidget extends AppWidgetProvider {
         super.onDisabled(context);
 
         //Unregister both receivers when the widget is removed
-        if(wifiReceiver != null) {
-            context.getApplicationContext().unregisterReceiver(wifiReceiver);
-        }
+        /*try {
+            if (wifiReceiver != null) {
+                context.getApplicationContext().unregisterReceiver(wifiReceiver);
+            }
 
-        if(localBroadcastReceiver != null) {
-            LocalBroadcastManager.getInstance(context.getApplicationContext()).unregisterReceiver(localBroadcastReceiver);
-        }
+            if (localBroadcastReceiver != null) {
+                LocalBroadcastManager.getInstance(context.getApplicationContext()).unregisterReceiver(localBroadcastReceiver);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Unregister receivers exception: " + e.toString());
+        } finally {
+            wifiReceiver = null;
+            localBroadcastReceiver = null;
+        }*/
     }
 
     @Override
@@ -85,19 +88,17 @@ public class ADBWifiWidget extends AppWidgetProvider {
         RemoteViews remoteViews = createRemoveViews(context);
         ComponentName componentName = createComponentName(context);
 
-        //Check for root, cant do anything without root
-        if (!RootTools.isRootAvailable()) {
-            //Set views
-            remoteViews.setTextViewText(R.id.widget_text, context.getString(R.string.not_rooted));
-            remoteViews.setImageViewResource(R.id.widget_image, R.drawable.adb_icon_off);
+        //Set click event to call onReceive()
+        remoteViews.setOnClickPendingIntent(R.id.widget_parent_relative_layout, getPendingSelfIntent(context));
 
-            //Update widget
-            appWidgetManager.updateAppWidget(componentName, remoteViews);
+        //Check for root, cant do anything without root
+        if(!isRooted(context)) {
             return;
         }
 
-        //Set click event to call onReceive()
-        remoteViews.setOnClickPendingIntent(R.id.widget_parent_relative_layout, getPendingSelfIntent(context));
+        //TESTING SOMETHING ...
+        registerWifiBroadcastReceiver(context);
+        registerLocalBroadcastReceiver(context);
 
         //Update internally
         updateState(context, remoteViews);
@@ -117,6 +118,18 @@ public class ADBWifiWidget extends AppWidgetProvider {
         RemoteViews remoteViews = createRemoveViews(context);
         ComponentName componentName = createComponentName(context);
 
+        //Set click event to call onReceive()
+        //remoteViews.setOnClickPendingIntent(R.id.widget_parent_relative_layout, getPendingSelfIntent(context));
+
+        //Check for root, cant do anything without root
+        if(!isRooted(context)) {
+            return;
+        }
+
+        //TESTING SOMETHING ...
+        registerWifiBroadcastReceiver(context);
+        registerLocalBroadcastReceiver(context);
+
         //Update internally
         updateState(context, remoteViews);
 
@@ -133,14 +146,41 @@ public class ADBWifiWidget extends AppWidgetProvider {
         closeAllShells();
     }
 
+    private boolean isRooted(Context context) {
+        if (!RootTools.isRootAvailable()) {
+            //Construct the RemoteViews & ComponentName objects
+            RemoteViews remoteViews = createRemoveViews(context);
+            ComponentName componentName = createComponentName(context);
+
+            //Set views
+            remoteViews.setTextViewText(R.id.widget_text, context.getString(R.string.not_rooted));
+            remoteViews.setImageViewResource(R.id.widget_image, R.drawable.adb_icon_off);
+
+            //Update widget
+            AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
+            appWidgetManager.updateAppWidget(componentName, remoteViews);
+            return false;
+        }
+
+        return true;
+    }
+
     private void registerWifiBroadcastReceiver(Context context) {
+        /*if(wifiReceiver != null) {
+            return;
+        }
+
         wifiReceiver = new WifiReceiver();
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
-        context.getApplicationContext().registerReceiver(wifiReceiver, intentFilter);
+        context.getApplicationContext().registerReceiver(wifiReceiver, intentFilter);*/
     }
 
     private void registerLocalBroadcastReceiver(Context context) {
+        /*if(localBroadcastReceiver != null) {
+            return;
+        }
+
         localBroadcastReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -160,7 +200,9 @@ public class ADBWifiWidget extends AppWidgetProvider {
             }
         };
 
-        LocalBroadcastManager.getInstance(context.getApplicationContext()).registerReceiver(localBroadcastReceiver, new IntentFilter(localBroadcastUpdateWifiMsg));
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(localBroadcastUpdateWifiMsg);
+        LocalBroadcastManager.getInstance(context.getApplicationContext()).registerReceiver(localBroadcastReceiver, intentFilter);*/
     }
 
     private RemoteViews createRemoveViews(Context context) {
@@ -172,9 +214,9 @@ public class ADBWifiWidget extends AppWidgetProvider {
     }
 
     private PendingIntent getPendingSelfIntent(Context context) {
-        Intent intent = new Intent(context, getClass());
+        Intent intent = new Intent(context.getApplicationContext(), getClass());
         intent.setAction(USER_CLICKED);
-        return PendingIntent.getBroadcast(context, 0, intent, 0);
+        return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
     private void switchState(Context context, RemoteViews remoteViews) {
@@ -253,7 +295,6 @@ public class ADBWifiWidget extends AppWidgetProvider {
             stdout.close();
 
             return stringBuilder.toString();
-
         } catch (IOException e) {
             Log.e(TAG, "Failed to exec command " + command + ": " + e.toString());
             return "";

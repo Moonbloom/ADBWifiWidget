@@ -3,7 +3,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="80dp"
     android:minHeight="40dp"
-    android:updatePeriodMillis="600000"
+    android:updatePeriodMillis="3600000"
     android:previewImage="@drawable/adb_wifi_widget_icon"
     android:initialLayout="@layout/adbwifi_widget"
     android:resizeMode="horizontal|vertical"
