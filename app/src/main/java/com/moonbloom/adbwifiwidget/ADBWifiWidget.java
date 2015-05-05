@@ -118,8 +118,8 @@ public class ADBWifiWidget extends AppWidgetProvider {
         RemoteViews remoteViews = createRemoveViews(context);
         ComponentName componentName = createComponentName(context);
 
-        //Set click event to call onReceive()
-        //remoteViews.setOnClickPendingIntent(R.id.widget_parent_relative_layout, getPendingSelfIntent(context));
+        //Set click event to call onReceive() //TEST
+        remoteViews.setOnClickPendingIntent(R.id.widget_parent_relative_layout, getPendingSelfIntent(context));
 
         //Check for root, cant do anything without root
         if(!isRooted(context)) {
