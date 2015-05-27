@@ -9,10 +9,11 @@ public class BootCompletedReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        Intent intentService = new Intent(context, HolderService.class);
+        //Start service to monitor WiFi connectivity
+        Intent intentService = new Intent(context, WifiReceiverService.class);
         context.getApplicationContext().startService(intentService);
 
-        //Broadcast the update intent with the connection status as an extra
+        //Broadcast intent to register click event on widget
         Intent broadcastIntent = new Intent(ADBWifiWidget.localRegisterClickEventMsg);
         LocalBroadcastManager.getInstance(context.getApplicationContext()).sendBroadcast(broadcastIntent);
     }

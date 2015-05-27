@@ -10,11 +10,14 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.os.Handler;
+import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.RemoteViews;
 
+import com.moonbloom.boast.Boast;
 import com.stericson.RootTools.RootTools;
 import com.stericson.RootTools.exceptions.RootDeniedException;
 import com.stericson.RootTools.execution.CommandCapture;
@@ -72,7 +75,7 @@ public class ADBWifiWidget extends AppWidgetProvider {
                 LocalBroadcastManager.getInstance(context.getApplicationContext()).unregisterReceiver(localBroadcastReceiver);
             }
 
-            Intent intentService = new Intent(context, HolderService.class);
+            Intent intentService = new Intent(context, WifiReceiverService.class);
             context.getApplicationContext().stopService(intentService);
         } catch (Exception e) {
             Log.e(TAG, "Unregister BroadcastReceiver/Stop Service exception: " + e.toString());
@@ -82,71 +85,102 @@ public class ADBWifiWidget extends AppWidgetProvider {
     }
 
     @Override
-    public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
+    public void onUpdate(final Context context, final AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         super.onUpdate(context, appWidgetManager, appWidgetIds);
 
-        //Construct the RemoteViews & ComponentName objects
-        RemoteViews remoteViews = createRemoveViews(context);
-        ComponentName componentName = createComponentName(context);
+        Runnable runnableOnUpdate = new Runnable() {
+            @Override
+            public void run() {
+                //Construct the RemoteViews & ComponentName objects
+                RemoteViews remoteViews = createRemoveViews(context);
+                ComponentName componentName = createComponentName(context);
 
-        //Set click event to call onReceive()
-        remoteViews.setOnClickPendingIntent(R.id.widget_parent_relative_layout, getPendingSelfIntent(context));
+                //Set click event to call onReceive()
+                remoteViews.setOnClickPendingIntent(R.id.widget_parent_relative_layout, getPendingSelfIntent(context));
 
-        //Check for root, cant do anything without root
-        if(!isRooted(context)) {
-            return;
-        }
+                //Check for root, cant do anything without root
+                if(!isRooted(context)) {
+                    return;
+                }
 
-        //Not 100% sure if this is needed, but i don't trust it to always be registered
-        registerLocalBroadcastReceiver(context);
+                //Not 100% sure if this is needed, but i don't trust it to always be registered
+                registerLocalBroadcastReceiver(context);
 
-        //Update internally
-        updateState(context, remoteViews);
+                //Update internally
+                updateState(context, remoteViews);
 
-        //Update widget
-        appWidgetManager.updateAppWidget(componentName, remoteViews);
+                //Update widget
+                appWidgetManager.updateAppWidget(componentName, remoteViews);
 
-        //Close shells to remove root icon
-        closeAllShells();
+                //Close shells to remove root icon
+                closeAllShells();
+            }
+        };
+
+        Thread thread = new Thread(runnableOnUpdate);
+        thread.start();
     }
 
     @Override
-    public void onReceive(@NonNull Context context, @NonNull Intent intent) {
+    public void onReceive(@NonNull final Context context, @NonNull final Intent intent) {
         super.onReceive(context, intent);
 
-        //Construct the RemoteViews & ComponentName objects
-        RemoteViews remoteViews = createRemoveViews(context);
-        ComponentName componentName = createComponentName(context);
+        Runnable runnableOnReceive = new Runnable() {
+            @Override
+            public void run() {
+                //Construct the RemoteViews & ComponentName objects
+                RemoteViews remoteViews = createRemoveViews(context);
+                ComponentName componentName = createComponentName(context);
 
-        //Set click event to call onReceive() //TEST
-        remoteViews.setOnClickPendingIntent(R.id.widget_parent_relative_layout, getPendingSelfIntent(context));
+                //Set click event to call onReceive() //TEST
+                remoteViews.setOnClickPendingIntent(R.id.widget_parent_relative_layout, getPendingSelfIntent(context));
 
-        //Check for root, cant do anything without root
-        if(!isRooted(context)) {
-            return;
-        }
+                //Check for root, cant do anything without root
+                if(!isRooted(context)) {
+                    return;
+                }
 
-        //Not 100% sure if this is needed, but i don't trust it to always be registered
-        registerLocalBroadcastReceiver(context);
+                //Not 100% sure if this is needed, but i don't trust it to always be registered
+                registerLocalBroadcastReceiver(context);
 
-        //Update internally
-        updateState(context, remoteViews);
+                //Update internally
+                updateState(context, remoteViews);
 
-        //If it's a user click, switch the state
-        if(intent.getAction().equals(USER_CLICKED)) {
-            switchState(context, remoteViews);
-        }
+                //If it's a user click, switch the state
+                if(intent.getAction().equals(USER_CLICKED)) {
+                    final String text;
+                    if(isActive) {
+                        text = "Deactivated";
+                    } else {
+                        text = "Activated";
+                    }
 
-        //Update widget
-        AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
-        appWidgetManager.updateAppWidget(componentName, remoteViews);
+                    Handler handler = new Handler(Looper.getMainLooper());
+                    handler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            Boast.makeText(context, text);
+                        }
+                    });
 
-        //Close shells to remove root icon
-        closeAllShells();
+                    switchState(context, remoteViews);
+                }
+
+                //Update widget
+                AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
+                appWidgetManager.updateAppWidget(componentName, remoteViews);
+
+                //Close shells to remove root icon
+                closeAllShells();
+            }
+        };
+
+        Thread thread = new Thread(runnableOnReceive);
+        thread.start();
     }
 
     private void startTheService(Context context) {
-        Intent intentService = new Intent(context, HolderService.class);
+        Intent intentService = new Intent(context, WifiReceiverService.class);
         context.getApplicationContext().startService(intentService);
     }
 
@@ -181,13 +215,13 @@ public class ADBWifiWidget extends AppWidgetProvider {
                 RemoteViews remoteViews = createRemoveViews(context);
                 ComponentName componentName = createComponentName(context);
 
-                if(intent.getAction().equals(localBroadcastUpdateWifiMsg)) {
-                    //Not using it at the moment, but might need it later
-                    boolean wifiEnabled = intent.getBooleanExtra(wifiEnabledBroadcastExtra, false);
-                } else if(intent.getAction().equals(localRegisterClickEventMsg)) {
+                if(intent.getAction().equals(localRegisterClickEventMsg)) {
                     //Set click event to call onReceive()
                     remoteViews.setOnClickPendingIntent(R.id.widget_parent_relative_layout, getPendingSelfIntent(context));
-                }
+                } /*else if(intent.getAction().equals(localBroadcastUpdateWifiMsg)) {
+                    //Not using it at the moment, but might need it later
+                    boolean wifiEnabled = intent.getBooleanExtra(wifiEnabledBroadcastExtra, false);
+                }*/
 
                 //Update internally
                 updateState(context, remoteViews);
@@ -199,7 +233,7 @@ public class ADBWifiWidget extends AppWidgetProvider {
         };
 
         IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(localBroadcastUpdateWifiMsg);
+        //intentFilter.addAction(localBroadcastUpdateWifiMsg);
         intentFilter.addAction(localRegisterClickEventMsg);
         LocalBroadcastManager.getInstance(context.getApplicationContext()).registerReceiver(localBroadcastReceiver, intentFilter);
     }

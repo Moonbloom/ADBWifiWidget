@@ -5,9 +5,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.os.IBinder;
-import android.util.Log;
 
-public class HolderService extends Service {
+public class WifiReceiverService extends Service {
 
     //region Variables
     //Debug TAG
@@ -26,7 +25,7 @@ public class HolderService extends Service {
             }
         });*/
 
-        Log.d(TAG, "onStartCommand");
+        //Log.d(TAG, "onStartCommand");
 
         if(wifiReceiver == null) {
             wifiReceiver = new WifiReceiver();

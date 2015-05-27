@@ -27,5 +27,5 @@ dependencies {
 
     compile 'com.android.support:support-v4:22.1.1'
 
-    //compile 'com.moonbloom:boast:0.2.0'
+    compile 'com.moonbloom:boast:0.2.0'
 }

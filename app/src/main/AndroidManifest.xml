@@ -26,7 +26,7 @@
         </receiver>
 
         <service
-            android:name=".HolderService">
+            android:name=".WifiReceiverService">
         </service>
 
         <receiver
