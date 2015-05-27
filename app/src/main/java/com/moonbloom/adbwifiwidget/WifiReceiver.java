@@ -14,7 +14,6 @@ public class WifiReceiver extends BroadcastReceiver {
     private transient final String TAG = ((Object)this).getClass().getSimpleName();
     //endregion
 
-    @SuppressWarnings("deprecation")
     @Override
     public void onReceive(Context context, Intent intent) {
         if (intent.getAction().equals(ConnectivityManager.CONNECTIVITY_ACTION)) {
@@ -32,6 +31,7 @@ public class WifiReceiver extends BroadcastReceiver {
     private void createLocalBroadcast(Context context, boolean isConnected) {
         //Boast.makeText(context, "Connected: " + isConnected);
         //Log.d(TAG, "Connected: " + isConnected);
+
         //Broadcast the update intent with the connection status as an extra
         Intent broadcastIntent = new Intent(ADBWifiWidget.localBroadcastUpdateWifiMsg);
         broadcastIntent.putExtra(ADBWifiWidget.wifiEnabledBroadcastExtra, isConnected);

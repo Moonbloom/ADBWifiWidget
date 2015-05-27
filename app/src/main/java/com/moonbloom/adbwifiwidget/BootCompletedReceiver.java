@@ -7,6 +7,11 @@ import android.support.v4.content.LocalBroadcastManager;
 
 public class BootCompletedReceiver extends BroadcastReceiver {
 
+    //region Variables
+    //Debug TAG
+    private transient final String TAG = ((Object)this).getClass().getSimpleName();
+    //endregion
+
     @Override
     public void onReceive(Context context, Intent intent) {
         //Start service to monitor WiFi connectivity

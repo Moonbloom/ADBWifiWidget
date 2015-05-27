@@ -12,7 +12,7 @@ public class WidgetApp extends Application {
     public void onCreate() {
         super.onCreate();
 
-        BStyle myStyle = new BStyle.Builder(BStyle.MESSAGE).setAutoCancel(false).setDuration(BConstants.BDuration.Long).build();
+        BStyle myStyle = new BStyle.Builder(BStyle.MESSAGE).setAutoCancel(true).setDuration(BConstants.BDuration.Long).build();
         Boast.setDefaultBStyle(myStyle);
     }
 }

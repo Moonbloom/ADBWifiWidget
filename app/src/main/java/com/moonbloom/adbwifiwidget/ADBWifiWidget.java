@@ -107,7 +107,7 @@ public class ADBWifiWidget extends AppWidgetProvider {
                 registerLocalBroadcastReceiver(context);
 
                 //Update internally
-                updateState(context, remoteViews);
+                updateState(context, remoteViews, false);
 
                 //Update widget
                 appWidgetManager.updateAppWidget(componentName, remoteViews);
@@ -144,26 +144,11 @@ public class ADBWifiWidget extends AppWidgetProvider {
                 registerLocalBroadcastReceiver(context);
 
                 //Update internally
-                updateState(context, remoteViews);
+                updateState(context, remoteViews, false);
 
                 //If it's a user click, switch the state
                 if(intent.getAction().equals(USER_CLICKED)) {
-                    final String text;
-                    if(isActive) {
-                        text = "Deactivated";
-                    } else {
-                        text = "Activated";
-                    }
-
-                    Handler handler = new Handler(Looper.getMainLooper());
-                    handler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            Boast.makeText(context, text);
-                        }
-                    });
-
-                    switchState(context, remoteViews);
+                    switchState(context, remoteViews, true);
                 }
 
                 //Update widget
@@ -224,7 +209,7 @@ public class ADBWifiWidget extends AppWidgetProvider {
                 }*/
 
                 //Update internally
-                updateState(context, remoteViews);
+                updateState(context, remoteViews, false);
 
                 //Update widget
                 AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
@@ -233,7 +218,7 @@ public class ADBWifiWidget extends AppWidgetProvider {
         };
 
         IntentFilter intentFilter = new IntentFilter();
-        //intentFilter.addAction(localBroadcastUpdateWifiMsg);
+        intentFilter.addAction(localBroadcastUpdateWifiMsg);
         intentFilter.addAction(localRegisterClickEventMsg);
         LocalBroadcastManager.getInstance(context.getApplicationContext()).registerReceiver(localBroadcastReceiver, intentFilter);
     }
@@ -252,7 +237,7 @@ public class ADBWifiWidget extends AppWidgetProvider {
         return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
-    private void switchState(Context context, RemoteViews remoteViews) {
+    private void switchState(Context context, RemoteViews remoteViews, boolean userClicked) {
         String command = isActive ? SET_PROP_COMMAND_OFF : SET_PROP_COMMAND_ON;
 
         try {
@@ -270,11 +255,11 @@ public class ADBWifiWidget extends AppWidgetProvider {
             return;
         }
 
-        updateState(context, remoteViews);
+        updateState(context, remoteViews, userClicked);
     }
 
-    private void updateState(Context context, RemoteViews remoteViews) {
-        refreshAdbState();
+    private void updateState(Context context, RemoteViews remoteViews, boolean userClicked) {
+        refreshAdbState(context, userClicked);
 
         String ip = getIpAddress(context);
         String text;
@@ -297,9 +282,25 @@ public class ADBWifiWidget extends AppWidgetProvider {
         remoteViews.setTextViewText(R.id.widget_text, text);
     }
 
-    private void refreshAdbState() {
+    private void refreshAdbState(final Context context, boolean userClicked) {
         String port = getAdbPort();
         isActive = !(port == null || port.equals("-1"));
+        if(userClicked) {
+            final String toastText;
+            if (isActive) {
+                toastText = "Activated";
+            } else {
+                toastText = "Deactivated";
+            }
+
+            Handler handler = new Handler(Looper.getMainLooper());
+            handler.post(new Runnable() {
+                @Override
+                public void run() {
+                    Boast.makeText(context, toastText);
+                }
+            });
+        }
     }
 
     private String getAdbPort() {

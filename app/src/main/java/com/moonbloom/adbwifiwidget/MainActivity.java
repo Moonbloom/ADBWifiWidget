@@ -5,7 +5,12 @@ import android.os.Bundle;
 
 public class MainActivity extends Activity {
 
+    //region Variables
+    //Debug TAG
+    private transient final String TAG = ((Object)this).getClass().getSimpleName();
+
     //private WifiReceiver wifiReceiver;
+    //endregion
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
