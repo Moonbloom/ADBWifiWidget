@@ -1,10 +1,13 @@
-package com.moonbloom.adbwifiwidget;
+package com.moonbloom.adbwifiwidget.services;
 
 import android.app.Service;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.os.IBinder;
+import android.util.Log;
+
+import com.moonbloom.adbwifiwidget.receivers.WifiReceiver;
 
 public class WifiReceiverService extends Service {
 
@@ -17,7 +20,7 @@ public class WifiReceiverService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-/*        Handler handler = new Handler();
+        /*Handler handler = new Handler();
         handler.post(new Runnable() {
             @Override
             public void run() {
@@ -40,7 +43,11 @@ public class WifiReceiverService extends Service {
     @Override
     public void onDestroy() {
         if(wifiReceiver != null) {
-            unregisterReceiver(wifiReceiver);
+            try {
+                unregisterReceiver(wifiReceiver);
+            } catch(IllegalArgumentException ex) {
+                Log.e(TAG, "Unregister WifiReceiver exception: " + ex.toString());
+            }
         }
     }
 

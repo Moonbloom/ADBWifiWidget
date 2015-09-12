@@ -1,7 +1,9 @@
-package com.moonbloom.adbwifiwidget;
+package com.moonbloom.adbwifiwidget.viewmodels;
 
 import android.app.Activity;
 import android.os.Bundle;
+
+import com.moonbloom.adbwifiwidget.R;
 
 public class MainActivity extends Activity {
 
