@@ -8,12 +8,17 @@ import android.net.NetworkInfo;
 
 import com.moonbloom.adbwifiwidget.otto.BusProvider;
 import com.moonbloom.adbwifiwidget.otto.events.WifiStateChangedEvent;
+import com.moonbloom.adbwifiwidget.utilities.MLog;
+import com.moonbloom.adbwifiwidget.utilities.SharedPrefs;
 
+@SuppressWarnings("FieldCanBeLocal")
 public class WifiReceiver extends BroadcastReceiver {
 
     //region Variables
     //Debug TAG
     private transient final String TAG = ((Object)this).getClass().getSimpleName();
+
+    private final long mConnectionOffsetTime = 2000;
     //endregion
 
     @Override
@@ -23,7 +28,10 @@ public class WifiReceiver extends BroadcastReceiver {
             if(networkInfo.getType() == ConnectivityManager.TYPE_WIFI) {
                 NetworkInfo.DetailedState state = networkInfo.getDetailedState();
                 if (state == NetworkInfo.DetailedState.CONNECTED || state == NetworkInfo.DetailedState.DISCONNECTED) {
-                    publishState(context, state);
+                    if((System.currentTimeMillis() - SharedPrefs.getLong(SharedPrefs.Pref.lastInternetConnect)) >= mConnectionOffsetTime) {
+                        SharedPrefs.setLong(SharedPrefs.Pref.lastInternetConnect, System.currentTimeMillis());
+                        publishState(context, state);
+                    }
                 }
             }
         }
@@ -31,7 +39,7 @@ public class WifiReceiver extends BroadcastReceiver {
 
     private void publishState(Context context, NetworkInfo.DetailedState state) {
         //Boast.makeText(context, "State: " + state);
-        //Log.d(TAG, "State: " + state);
+        //MLog.makeLog(TAG, "State: " + state);
 
         //Publish the WifiStateChangedEvent
         BusProvider.getInstance().post(new WifiStateChangedEvent(context, state));

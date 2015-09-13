@@ -8,6 +8,7 @@ import android.os.IBinder;
 import android.util.Log;
 
 import com.moonbloom.adbwifiwidget.receivers.WifiReceiver;
+import com.moonbloom.adbwifiwidget.utilities.MLog;
 
 public class WifiReceiverService extends Service {
 
@@ -28,7 +29,7 @@ public class WifiReceiverService extends Service {
             }
         });*/
 
-        //Log.d(TAG, "onStartCommand");
+        //MLog.makeLog(TAG, "onStartCommand");
 
         if(wifiReceiver == null) {
             wifiReceiver = new WifiReceiver();
@@ -46,7 +47,7 @@ public class WifiReceiverService extends Service {
             try {
                 unregisterReceiver(wifiReceiver);
             } catch(IllegalArgumentException ex) {
-                Log.e(TAG, "Unregister WifiReceiver exception: " + ex.toString());
+                MLog.makeLog(TAG, "Unregister WifiReceiver exception: " + ex.toString());
             }
         }
     }

@@ -1,0 +1,6 @@
+<resources>
+
+    <integer name="default_last_internet_connect">0</integer>
+    <integer name="default_last_widget_update">0</integer>
+
+</resources>
