@@ -5,20 +5,15 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.support.v4.content.LocalBroadcastManager;
 
-import com.moonbloom.adbwifiwidget.otto.BusProvider;
-import com.moonbloom.adbwifiwidget.otto.events.WifiStateChangedEvent;
-import com.moonbloom.adbwifiwidget.utilities.MLog;
-import com.moonbloom.adbwifiwidget.utilities.SharedPrefs;
+import com.moonbloom.adbwifiwidget.widget.ADBWifiWidget;
 
-@SuppressWarnings("FieldCanBeLocal")
 public class WifiReceiver extends BroadcastReceiver {
 
     //region Variables
     //Debug TAG
     private transient final String TAG = ((Object)this).getClass().getSimpleName();
-
-    private final long mConnectionOffsetTime = 2000;
     //endregion
 
     @Override
@@ -26,22 +21,22 @@ public class WifiReceiver extends BroadcastReceiver {
         if (intent.getAction().equals(ConnectivityManager.CONNECTIVITY_ACTION)) {
             NetworkInfo networkInfo = intent.getParcelableExtra(ConnectivityManager.EXTRA_NETWORK_INFO);
             if(networkInfo.getType() == ConnectivityManager.TYPE_WIFI) {
-                NetworkInfo.DetailedState state = networkInfo.getDetailedState();
-                if (state == NetworkInfo.DetailedState.CONNECTED || state == NetworkInfo.DetailedState.DISCONNECTED) {
-                    if((System.currentTimeMillis() - SharedPrefs.getLong(SharedPrefs.Pref.lastInternetConnect)) >= mConnectionOffsetTime) {
-                        SharedPrefs.setLong(SharedPrefs.Pref.lastInternetConnect, System.currentTimeMillis());
-                        publishState(context, state);
-                    }
+                if (networkInfo.getDetailedState() == NetworkInfo.DetailedState.CONNECTED) {
+                    createLocalBroadcast(context, true);
+                } else if (networkInfo.getDetailedState() == NetworkInfo.DetailedState.DISCONNECTED) {
+                    createLocalBroadcast(context, false);
                 }
             }
         }
     }
 
-    private void publishState(Context context, NetworkInfo.DetailedState state) {
-        //Boast.makeText(context, "State: " + state);
-        //MLog.makeLog(TAG, "State: " + state);
+    private void createLocalBroadcast(Context context, boolean isConnected) {
+        //Boast.makeText(context, "Connected: " + isConnected);
+        //Log.d(TAG, "Connected: " + isConnected);
 
-        //Publish the WifiStateChangedEvent
-        BusProvider.getInstance().post(new WifiStateChangedEvent(context, state));
+        //Broadcast the update intent with the connection status as an extra
+        Intent broadcastIntent = new Intent(ADBWifiWidget.localBroadcastUpdateWifiMsg);
+        broadcastIntent.putExtra(ADBWifiWidget.wifiEnabledBroadcastExtra, isConnected);
+        LocalBroadcastManager.getInstance(context.getApplicationContext()).sendBroadcast(broadcastIntent);
     }
 }

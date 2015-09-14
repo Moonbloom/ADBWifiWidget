@@ -3,27 +3,25 @@ package com.moonbloom.adbwifiwidget.widget;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.annotation.NonNull;
+import android.support.v4.content.LocalBroadcastManager;
+import android.util.Log;
 import android.widget.RemoteViews;
 
 import com.moonbloom.adbwifiwidget.R;
-import com.moonbloom.adbwifiwidget.otto.BusProvider;
-import com.moonbloom.adbwifiwidget.otto.events.BootCompletedEvent;
-import com.moonbloom.adbwifiwidget.otto.events.WifiStateChangedEvent;
 import com.moonbloom.adbwifiwidget.services.WifiReceiverService;
-import com.moonbloom.adbwifiwidget.utilities.MLog;
-import com.moonbloom.adbwifiwidget.utilities.SharedPrefs;
 import com.moonbloom.boast.BConstants;
 import com.moonbloom.boast.BStyle;
 import com.moonbloom.boast.Boast;
-import com.squareup.otto.Subscribe;
 import com.stericson.RootTools.RootTools;
 import com.stericson.RootTools.exceptions.RootDeniedException;
 import com.stericson.RootTools.execution.CommandCapture;
@@ -32,7 +30,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.Random;
 import java.util.concurrent.TimeoutException;
 
 //https://bitbucket.org/RankoR/adb-over-network/src/
@@ -44,6 +41,10 @@ public class ADBWifiWidget extends AppWidgetProvider {
     //Debug TAG
     private transient final String TAG = ((Object)this).getClass().getSimpleName();
 
+    public static final String localBroadcastUpdateWifiMsg = "local_broadcast_update_wifi_msg";
+    public static final String localRegisterClickEventMsg = "local_register_click_event_msg";
+    public static final String wifiEnabledBroadcastExtra = "wifi_enabled_broadcast_extra";
+
     private static final String USER_CLICKED = "userClickedSwitchState";
 
     private final String invalidIp = "0.0.0.0";
@@ -53,19 +54,19 @@ public class ADBWifiWidget extends AppWidgetProvider {
     private final String SET_PROP_COMMAND_OFF = "setprop service.adb.tcp.port -1";
     private final String START_ADBD_COMMAND = "start adbd";
     private final String STOP_ADBD_COMMAND = "stop adbd";
+    private static BroadcastReceiver localBroadcastReceiver = null;
 
     private boolean isActive = false;
-
-    private final long mOffsetTime = 1000;
     //endregion
 
-    //region Overrides
     @Override
     public void onEnabled(Context context) {
         super.onEnabled(context);
 
         //Register receiver and start service when the widget is added
-        registerBusAndStartService(context);
+        registerLocalBroadcastReceiver(context);
+
+        startTheService(context);
     }
 
     @Override
@@ -73,110 +74,160 @@ public class ADBWifiWidget extends AppWidgetProvider {
         super.onDisabled(context);
 
         //Unregister receiver and stop service when the widget is removed
-        unregisterBusAndStopService(context);
+        try {
+            if (localBroadcastReceiver != null) {
+                LocalBroadcastManager.getInstance(context.getApplicationContext()).unregisterReceiver(localBroadcastReceiver);
+            }
+
+            Intent intentService = new Intent(context, WifiReceiverService.class);
+            context.getApplicationContext().stopService(intentService);
+        } catch (Exception e) {
+            Log.e(TAG, "Unregister BroadcastReceiver/Stop Service exception: " + e.toString());
+        } finally {
+            localBroadcastReceiver = null;
+        }
     }
 
     @Override
-    public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
+    public void onUpdate(final Context context, final AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         super.onUpdate(context, appWidgetManager, appWidgetIds);
 
-        runRunnable(context, null);
+        Runnable runnableOnUpdate = new Runnable() {
+            @Override
+            public void run() {
+                //Construct the RemoteViews & ComponentName objects
+                RemoteViews remoteViews = createRemoveViews(context);
+                ComponentName componentName = createComponentName(context);
+
+                //Set click event to call onReceive()
+                remoteViews.setOnClickPendingIntent(R.id.widget_parent_relative_layout, getPendingSelfIntent(context));
+
+                //Check for root, cant do anything without root
+                if(!isRooted(context)) {
+                    return;
+                }
+
+                //Not 100% sure if this is needed, but i don't trust it to always be registered
+                registerLocalBroadcastReceiver(context);
+
+                //Update internally
+                updateState(context, remoteViews, false);
+
+                //Update widget
+                appWidgetManager.updateAppWidget(componentName, remoteViews);
+
+                //Close shells to remove root icon
+                closeAllShells();
+            }
+        };
+
+        Thread thread = new Thread(runnableOnUpdate);
+        thread.start();
     }
 
     @Override
-    public void onReceive(@NonNull Context context, @NonNull Intent intent) {
+    public void onReceive(@NonNull final Context context, @NonNull final Intent intent) {
         super.onReceive(context, intent);
 
-        //showBoast(context, "Receive");
-        runRunnable(context, intent);
+        Runnable runnableOnReceive = new Runnable() {
+            @Override
+            public void run() {
+                //Construct the RemoteViews & ComponentName objects
+                RemoteViews remoteViews = createRemoveViews(context);
+                ComponentName componentName = createComponentName(context);
+
+                //Set click event to call onReceive() //TEST
+                remoteViews.setOnClickPendingIntent(R.id.widget_parent_relative_layout, getPendingSelfIntent(context));
+
+                //Check for root, cant do anything without root
+                if(!isRooted(context)) {
+                    return;
+                }
+
+                //Not 100% sure if this is needed, but i don't trust it to always be registered
+                registerLocalBroadcastReceiver(context);
+
+                //Update internally
+                updateState(context, remoteViews, false);
+
+                //If it's a user click, switch the state
+                if(intent.getAction().equals(USER_CLICKED)) {
+                    switchState(context, remoteViews, true);
+                }
+
+                //Update widget
+                AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
+                appWidgetManager.updateAppWidget(componentName, remoteViews);
+
+                //Close shells to remove root icon
+                closeAllShells();
+            }
+        };
+
+        Thread thread = new Thread(runnableOnReceive);
+        thread.start();
     }
-    //endregion
 
-    //region Subscribe
-    @Subscribe
-    public void onWifiStateChanged(WifiStateChangedEvent event) {
-        runRunnable(event.getContext(), null);
-    }
-
-    @Subscribe
-    public void onBootCompleted(BootCompletedEvent event) {
-        setOnClickEvent(event.getContext());
-
-        //runRunnable(event.getContext(), null);
-    }
-    //endregion
-
-    //region Start/Stop Bus & Service
-    private void registerBusAndStartService(Context context) {
-        BusProvider.getInstance().register(this);
-
+    private void startTheService(Context context) {
         Intent intentService = new Intent(context, WifiReceiverService.class);
         context.getApplicationContext().startService(intentService);
     }
 
-    private void unregisterBusAndStopService(Context context) {
-        try {
-            BusProvider.getInstance().unregister(this);
-        } catch (IllegalArgumentException ex) {
-            MLog.makeLog(TAG, "Unregister Bus/Stop Service exception: " + ex.toString());
+    private boolean isRooted(Context context) {
+        if (!RootTools.isRootAvailable()) {
+            //Construct the RemoteViews & ComponentName objects
+            RemoteViews remoteViews = createRemoveViews(context);
+            ComponentName componentName = createComponentName(context);
+
+            //Set views
+            remoteViews.setTextViewText(R.id.widget_text, context.getString(R.string.not_rooted));
+            remoteViews.setImageViewResource(R.id.widget_image, R.drawable.adb_icon_off);
+
+            //Update widget
+            AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
+            appWidgetManager.updateAppWidget(componentName, remoteViews);
+            return false;
         }
 
-        Intent intentService = new Intent(context, WifiReceiverService.class);
-        context.getApplicationContext().stopService(intentService);
-    }
-    //endregion
-
-    private void setOnClickEvent(Context context) {
-        //Construct the RemoteViews & ComponentName objects
-        RemoteViews remoteViews = createRemoteViews(context);
-        ComponentName componentName = createComponentName(context);
-
-        //Set click event to call onReceive()
-        remoteViews.setOnClickPendingIntent(R.id.widget_parent_relative_layout, createPendingSelfIntent(context));
-
-        //Update widget to enable the new onClickPendingIntent
-        AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
-        appWidgetManager.updateAppWidget(componentName, remoteViews);
+        return true;
     }
 
-    private void runRunnable(final Context context, final Intent intent) {
-        if((System.currentTimeMillis() - SharedPrefs.getLong(SharedPrefs.Pref.lastWidgetUpdate)) >= mOffsetTime) {
-            SharedPrefs.setLong(SharedPrefs.Pref.lastWidgetUpdate, System.currentTimeMillis());
-
-            Runnable runnable = new Runnable() {
-                @Override
-                public void run() {
-                    setOnClickEvent(context);
-
-                    //Check for root, cant do anything without root
-                    if(!RootTools.isRootAvailable()) {
-                        updateView(context, context.getString(R.string.not_rooted), R.drawable.adb_icon_off);
-                        return;
-                    }
-
-                    //Not 100% sure if this is needed, as i don't trust it to always be registered/started
-                    //registerBusAndStartService(context);
-
-                    //Update internally
-                    updateState(context, false);
-
-                    //If it's a user click, switch the state
-                    if(intent != null && intent.getAction() != null && intent.getAction().equals(USER_CLICKED)) {
-                        switchState(context, true);
-                    }
-
-                    //Close shells to remove root icon
-                    closeAllShells();
-                }
-            };
-
-            Thread thread = new Thread(runnable);
-            thread.start();
+    private void registerLocalBroadcastReceiver(Context context) {
+        if(localBroadcastReceiver != null) {
+            return;
         }
+
+        localBroadcastReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                //Construct the RemoteViews & ComponentName objects
+                RemoteViews remoteViews = createRemoveViews(context);
+                ComponentName componentName = createComponentName(context);
+
+                if(intent.getAction().equals(localRegisterClickEventMsg)) {
+                    //Set click event to call onReceive()
+                    remoteViews.setOnClickPendingIntent(R.id.widget_parent_relative_layout, getPendingSelfIntent(context));
+                } /*else if(intent.getAction().equals(localBroadcastUpdateWifiMsg)) {
+                    //Not using it at the moment, but might need it later
+                    boolean wifiEnabled = intent.getBooleanExtra(wifiEnabledBroadcastExtra, false);
+                }*/
+
+                //Update internally
+                updateState(context, remoteViews, false);
+
+                //Update widget
+                AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
+                appWidgetManager.updateAppWidget(componentName, remoteViews);
+            }
+        };
+
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(localBroadcastUpdateWifiMsg);
+        intentFilter.addAction(localRegisterClickEventMsg);
+        LocalBroadcastManager.getInstance(context.getApplicationContext()).registerReceiver(localBroadcastReceiver, intentFilter);
     }
 
-    //region Create elements
-    private RemoteViews createRemoteViews(Context context) {
+    private RemoteViews createRemoveViews(Context context) {
         return new RemoteViews(context.getPackageName(), R.layout.adbwifi_widget);
     }
 
@@ -184,14 +235,13 @@ public class ADBWifiWidget extends AppWidgetProvider {
         return new ComponentName(context, ADBWifiWidget.class);
     }
 
-    private PendingIntent createPendingSelfIntent(Context context) {
+    private PendingIntent getPendingSelfIntent(Context context) {
         Intent intent = new Intent(context.getApplicationContext(), getClass());
         intent.setAction(USER_CLICKED);
         return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
     }
-    //endregion
 
-    private void switchState(Context context, boolean userClicked) {
+    private void switchState(Context context, RemoteViews remoteViews, boolean userClicked) {
         String command = isActive ? SET_PROP_COMMAND_OFF : SET_PROP_COMMAND_ON;
 
         try {
@@ -199,57 +249,45 @@ public class ADBWifiWidget extends AppWidgetProvider {
             RootTools.getShell(true).add(new CommandCapture(0, STOP_ADBD_COMMAND));
             RootTools.getShell(true).add(new CommandCapture(0, START_ADBD_COMMAND));
         } catch (IOException e) {
-            MLog.makeLog(TAG, "I/O Exception: " + e.toString());
+            Log.e(TAG, "I/O Exception: " + e.toString());
             return;
         } catch (TimeoutException e) {
-            MLog.makeLog(TAG, "Command timeout: " + e.toString());
+            Log.e(TAG, "Command timeout: " + e.toString());
             return;
         } catch (RootDeniedException e) {
-            MLog.makeLog(TAG, "Root denied: " + e.toString());
+            Log.e(TAG, "Root denied: " + e.toString());
             return;
         }
 
-        updateState(context, userClicked);
+        updateState(context, remoteViews, userClicked);
     }
 
-    private void updateState(Context context, boolean userClicked) {
+    private void updateState(Context context, RemoteViews remoteViews, boolean userClicked) {
         refreshAdbState(context, userClicked);
 
         String ip = getIpAddress(context);
         String text;
-        int imageResId;
+        int drawable;
 
         if (isActive) {
             if(ip != null && !ip.equals(invalidIp)) {
                 text = ip;
-                imageResId = R.drawable.adb_icon_on;
+                drawable = R.drawable.adb_icon_on;
             } else {
                 text = context.getString(R.string.turn_on_wifi);
-                imageResId = R.drawable.adb_icon_wifi;
+                drawable = R.drawable.adb_icon_wifi;
             }
         } else {
             text = context.getString(R.string.disabled);
-            imageResId = R.drawable.adb_icon_off;
+            drawable = R.drawable.adb_icon_off;
         }
 
-        updateView(context, text, imageResId);
-    }
-
-    private void updateView(Context context, String text, int drawableResId) {
-        RemoteViews remoteViews = createRemoteViews(context);
-        ComponentName componentName = createComponentName(context);
-
-        remoteViews.setImageViewResource(R.id.widget_image, drawableResId);
+        remoteViews.setImageViewResource(R.id.widget_image, drawable);
         remoteViews.setTextViewText(R.id.widget_text, text);
-
-        //Update widget
-        AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
-        appWidgetManager.updateAppWidget(componentName, remoteViews);
     }
 
     private void refreshAdbState(final Context context, boolean userClicked) {
         String port = getAdbPort();
-        //showBoast(context, userClicked + "\n" + "Port: " + port);
         isActive = !(port == null || port.equals("-1"));
         if(userClicked) {
             Handler handler = new Handler(Looper.getMainLooper());
@@ -267,7 +305,16 @@ public class ADBWifiWidget extends AppWidgetProvider {
         }
     }
 
-    private String executeCommand(String command) {
+    private String getAdbPort() {
+        String output = execCommand(GET_PROP_COMMAND);
+        if (output.isEmpty()) {
+            return null;
+        } else {
+            return output;
+        }
+    }
+
+    private String execCommand(String command) {
         try {
             Process process = Runtime.getRuntime().exec(command);
 
@@ -285,12 +332,11 @@ public class ADBWifiWidget extends AppWidgetProvider {
 
             return stringBuilder.toString();
         } catch (IOException e) {
-            MLog.makeLog(TAG, "Failed to execute command " + command + ": " + e.toString());
+            Log.e(TAG, "Failed to exec command " + command + ": " + e.toString());
             return "";
         }
     }
 
-    //region Get IP / ADB
     private String getIpAddress(Context context) {
         WifiManager wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
         WifiInfo wifiInfo = wifiManager.getConnectionInfo();
@@ -298,16 +344,6 @@ public class ADBWifiWidget extends AppWidgetProvider {
 
         return String.format("%d.%d.%d.%d", (ipAddress & 0xff), (ipAddress >> 8 & 0xff), (ipAddress >> 16 & 0xff), (ipAddress >> 24 & 0xff));
     }
-
-    private String getAdbPort() {
-        String output = executeCommand(GET_PROP_COMMAND);
-        if (output.isEmpty()) {
-            return null;
-        } else {
-            return output;
-        }
-    }
-    //endregion
 
     private void closeAllShells() {
         if(RootTools.isAccessGiven()) {
@@ -318,17 +354,4 @@ public class ADBWifiWidget extends AppWidgetProvider {
             }
         }
     }
-
-    //region Debugging
-    private void showBoast(final Context context, final String text) {
-        Handler handler = new Handler(Looper.getMainLooper());
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                Random random = new Random();
-                Boast.makeText(context, text + "\n\n" + random.nextInt(1000));
-            }
-        });
-    }
-    //endregion
 }

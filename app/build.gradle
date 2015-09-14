@@ -28,5 +28,5 @@ dependencies {
     compile 'com.android.support:support-v4:23.0.1'
 
     compile 'com.squareup:otto:1.3.8'
-    compile 'com.moonbloom:boast:0.3.0'
+    compile 'com.moonbloom:boast:0.4.1'
 }
